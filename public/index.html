@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>SPY AI · Executive Voice Assistant</title>
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="./style.css?v=3" />
+
+  <!-- Small fallback CSS so app does not look broken if CSS is loading slowly -->
+  <style>
+    .hidden {
+      display: none !important;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .active-page {
+      display: block;
+    }
+  </style>
+
+  <!-- Main JS -->
+  <script src="./script.js?v=3" defer></script>
+</head>
+
+<body>
+  <div class="app-shell">
+
+    <!-- LOGIN / SIGNUP SCREEN -->
+    <section id="authScreen" class="auth-screen">
+      <div class="auth-card">
+        <div class="brand-row">
+          <div class="logo">🕵️</div>
+
+          <div>
+            <h1>SPY AI</h1>
+            <p>Executive Intelligence Suite</p>
+          </div>
+        </div>
+
+        <h2 id="authTitle">Join the Neural Network</h2>
+        <p class="muted">
+          Secure access to live voice cognition, meeting archives, and AI scheduling.
+        </p>
+
+        <div class="auth-tabs">
+          <button type="button" id="loginTab" class="active">Login</button>
+          <button type="button" id="signupTab">Signup</button>
+        </div>
+
+        <form id="authForm">
+          <input id="nameInput" type="text" placeholder="Your name" class="hidden" />
+          <input id="emailInput" type="email" placeholder="Email address" required />
+          <input id="passwordInput" type="password" placeholder="Password" required />
+
+          <button type="submit" class="primary-btn">
+            Enter Command Center
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- MAIN APP -->
+    <section id="mainApp" class="main-app hidden">
+
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="side-brand">
+          <span>🕵️</span>
+          <h2>SPY AI</h2>
+        </div>
+
+        <nav>
+          <button type="button" class="nav-btn active" data-page="dashboardPage">
+            🏠 Dashboard
+          </button>
+
+          <button type="button" class="nav-btn" data-page="livePage">
+            🎙️ Live Session
+          </button>
+
+          <button type="button" class="nav-btn" data-page="archivePage">
+            🧠 Archive
+          </button>
+
+          <button type="button" class="nav-btn" data-page="settingsPage">
+            ⚙️ Settings
+          </button>
+        </nav>
+
+        <button type="button" id="logoutBtn" class="logout-btn">
+          🚪 Logout
+        </button>
+      </aside>
+
+      <!-- CONTENT -->
+      <main class="content">
+
+        <!-- TOP BAR -->
+        <header class="topbar">
+          <div>
+            <h1 id="pageTitle">Command Center</h1>
+            <p id="welcomeText">Welcome back, Agent.</p>
+          </div>
+
+          <div class="top-actions">
+            <select id="languageSelect">
+              <option value="en-US">🎙️ English</option>
+              <option value="hi-IN">Hindi</option>
+              <option value="kn-IN">Kannada</option>
+            </select>
+
+            <button type="button" id="themeToggle">
+              🌓 MODE
+            </button>
+          </div>
+        </header>
+
+        <!-- DASHBOARD PAGE -->
+        <section id="dashboardPage" class="page active-page">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span>⚡</span>
+              <h3>12 ms</h3>
+              <p>Processing Latency</p>
+            </div>
+
+            <div class="stat-card">
+              <span>🧬</span>
+              <h3>99.2%</h3>
+              <p>Token Efficiency</p>
+            </div>
+
+            <div class="stat-card">
+              <span>🔐</span>
+              <h3>Secure</h3>
+              <p>Encrypted Session</p>
+            </div>
+
+            <div class="stat-card">
+              <span>📅</span>
+              <h3 id="meetingCount">0</h3>
+              <p>Scheduled Meetings</p>
+            </div>
+          </div>
+
+          <div class="dashboard-grid">
+            <div class="glass-card">
+              <h2>🎤 Quick Launch</h2>
+              <p class="muted">
+                Start a live cognition session and command SPY AI using voice.
+              </p>
+
+              <button type="button" class="primary-btn" onclick="openPage('livePage')">
+                Start Listening
+              </button>
+            </div>
+
+            <div class="glass-card">
+              <h2>🧾 Recent Conversations</h2>
+
+              <ul id="recentList" class="clean-list">
+                <li>No conversations yet.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- LIVE SESSION PAGE -->
+        <section id="livePage" class="page">
+          <div class="live-grid">
+
+            <div class="voice-panel">
+              <div id="micButton" class="mic-orb">
+                🎙️
+              </div>
+
+              <div class="wave-bars">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+
+              <p id="statusText">Tap mic or type command</p>
+
+              <div class="chips">
+                <button type="button" onclick="sendQuick('hello')">hello</button>
+                <button type="button" onclick="sendQuick('what is the time')">what is the time</button>
+                <button type="button" onclick="sendQuick('what is today date')">what is today's date</button>
+                <button type="button" onclick="sendQuick('tell me a joke')">tell me a joke</button>
+                <button type="button" onclick="sendQuick('schedule meeting with Rahul tomorrow at 5 PM')">schedule meeting</button>
+              </div>
+
+              <div class="command-box">
+                <input id="commandInput" type="text" placeholder="📝 Type secret command..." />
+                <button type="button" id="sendBtn">SEND</button>
+              </div>
+            </div>
+
+            <div class="mission-panel">
+              <div class="panel-head">
+                <h2>📡 Mission Log</h2>
+                <button type="button" id="clearLogBtn">CLEAR</button>
+              </div>
+
+              <div id="missionLog" class="mission-log">
+                <div class="ai-msg">
+                  🕵️ SPY AI online. I can answer questions and schedule meetings.
+                </div>
+              </div>
+            </div>
+
+            <div class="glass-card transcript-card">
+              <h2>📝 Live Transcript</h2>
+
+              <div id="transcriptBox" class="transcript-box">
+                Waiting for speech...
+              </div>
+            </div>
+
+            <div class="glass-card summary-card">
+              <h2>🧠 AI Summary</h2>
+
+              <div id="summaryBox" class="summary-box">
+                <p><b>Intent:</b> Not detected</p>
+                <p><b>Date:</b> —</p>
+                <p><b>Time:</b> —</p>
+                <p><b>Person:</b> —</p>
+                <p><b>Action:</b> Waiting for command</p>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ARCHIVE PAGE -->
+        <section id="archivePage" class="page">
+          <div class="page-header-row">
+            <div>
+              <h2>🧠 Meetings Archive</h2>
+              <p class="muted">
+                Stored meeting commands and AI-generated summaries.
+              </p>
+            </div>
+
+            <input id="archiveSearch" type="text" placeholder="Search archive..." />
+          </div>
+
+          <div id="archiveList" class="archive-list"></div>
+        </section>
+
+        <!-- SETTINGS PAGE -->
+        <section id="settingsPage" class="page">
+          <div class="settings-grid">
+
+            <div class="glass-card">
+              <h2>⚙️ Core Parameters</h2>
+
+              <label for="aiEngineSelect">AI Engine</label>
+              <select id="aiEngineSelect">
+                <option>Gemini</option>
+                <option>OpenAI</option>
+                <option>Local Model</option>
+              </select>
+
+              <label for="voiceSelect">Voice Response</label>
+              <select id="voiceSelect">
+                <option>Default System Voice</option>
+              </select>
+
+              <label for="themeSelect">Theme</label>
+              <select id="themeSelect">
+                <option value="dark">Dark Neural</option>
+                <option value="light">Light Mode</option>
+              </select>
+            </div>
+
+            <div class="glass-card">
+              <h2>🔗 Integrations</h2>
+
+              <div class="integration">
+                Google Calendar
+                <span>Not Connected</span>
+              </div>
+
+              <div class="integration">
+                Google Meet
+                <span>Not Connected</span>
+              </div>
+
+              <div class="integration">
+                Slack
+                <span>Not Connected</span>
+              </div>
+
+              <div class="integration">
+                Notion
+                <span>Not Connected</span>
+              </div>
+
+              <div class="integration">
+                GitHub
+                <span>Not Connected</span>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+    </section>
+
+  </div>
+</body>
+</html>

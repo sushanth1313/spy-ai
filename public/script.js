@@ -336,8 +336,14 @@ async function handleCommand(text) {
 ========================= */
 
 async function askBackendAI(message) {
+  const API_BASE_URL =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+      ? ""
+      : "https://spy-ai-backend.onrender.com";
+
   try {
-    const response = await fetch("/api/chat", {
+    const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -358,7 +364,6 @@ async function askBackendAI(message) {
     return generateLocalReply(message);
   }
 }
-
 /* =========================
    LOCAL FALLBACK AI
 ========================= */

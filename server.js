@@ -27,7 +27,8 @@ console.log("Gemini key found:", GEMINI_API_KEY ? "YES ✅" : "NO ❌");
 console.log("Node version:", process.version);
 console.log("--------------------------------");
 
-let cachedModel = null;
+let lastSuccessfulModel = null;
+let cachedAvailableModels = null;
 
 /* HEALTH CHECK */
 app.get("/api/health", (req, res) => {
@@ -35,7 +36,7 @@ app.get("/api/health", (req, res) => {
     success: true,
     message: "SPY AI backend is running",
     geminiConnected: GEMINI_API_KEY.trim() !== "",
-    selectedModel: cachedModel || "not selected yet",
+    lastSuccessfulModel: lastSuccessfulModel || "not selected yet",
   });
 });
 
@@ -60,9 +61,10 @@ app.get("/api/models", async (req, res) => {
 app.get("/api/test-gemini", async (req, res) => {
   try {
     const reply = await askGemini("Say hello in English.");
+
     res.json({
       success: true,
-      model: cachedModel,
+      model: lastSuccessfulModel,
       reply,
     });
   } catch (error) {
@@ -88,7 +90,7 @@ app.post("/api/chat", async (req, res) => {
     return res.json({
       success: true,
       reply:
-        "Gemini API key is missing. Add GEMINI_API_KEY in .env file and restart the server.",
+        "Gemini API key is missing. Add GEMINI_API_KEY in Render environment variables.",
     });
   }
 
@@ -97,7 +99,7 @@ app.post("/api/chat", async (req, res) => {
 
     return res.json({
       success: true,
-      model: cachedModel,
+      model: lastSuccessfulModel,
       reply,
     });
   } catch (error) {
@@ -106,13 +108,18 @@ app.post("/api/chat", async (req, res) => {
 
     return res.json({
       success: true,
-      reply: `Gemini error: ${error.message}`,
+      reply:
+        "SPY AI is temporarily busy because the AI model has high demand. Please try again in a few seconds.",
     });
   }
 });
 
 /* LIST MODELS FROM GOOGLE */
 async function listGeminiModels() {
+  if (cachedAvailableModels) {
+    return cachedAvailableModels;
+  }
+
   const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(
     GEMINI_API_KEY.trim()
   )}`;
@@ -124,13 +131,12 @@ async function listGeminiModels() {
     throw new Error(data?.error?.message || JSON.stringify(data));
   }
 
-  return data.models || [];
+  cachedAvailableModels = data.models || [];
+  return cachedAvailableModels;
 }
 
-/* PICK A MODEL THAT SUPPORTS generateContent */
-async function getWorkingModel() {
-  if (cachedModel) return cachedModel;
-
+/* GET MODELS THAT SUPPORT generateContent */
+async function getGenerateContentModels() {
   const models = await listGeminiModels();
 
   const generateModels = models.filter((model) => {
@@ -142,31 +148,33 @@ async function getWorkingModel() {
   }
 
   const preferredOrder = [
-    "models/gemini-2.5-flash",
-    "models/gemini-2.5-flash-lite",
     "models/gemini-2.0-flash",
     "models/gemini-2.0-flash-lite",
+    "models/gemini-2.5-flash-lite",
+    "models/gemini-2.5-flash",
   ];
 
-  for (const preferred of preferredOrder) {
+  const orderedModels = [];
+
+  preferredOrder.forEach((preferred) => {
     const found = generateModels.find((model) => model.name === preferred);
 
     if (found) {
-      cachedModel = found.name;
-      console.log("✅ Selected Gemini model:", cachedModel);
-      return cachedModel;
+      orderedModels.push(found.name);
     }
-  }
+  });
 
-  cachedModel = generateModels[0].name;
-  console.log("✅ Selected Gemini model:", cachedModel);
-  return cachedModel;
+  generateModels.forEach((model) => {
+    if (!orderedModels.includes(model.name)) {
+      orderedModels.push(model.name);
+    }
+  });
+
+  return orderedModels;
 }
 
-/* ASK GEMINI */
+/* ASK GEMINI WITH BACKUP MODELS */
 async function askGemini(userMessage) {
-  const model = await getWorkingModel();
-
   const prompt = `
 You are SPY AI, a helpful multilingual assistant.
 
@@ -184,49 +192,72 @@ User asked:
 ${userMessage}
 `;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${encodeURIComponent(
-    GEMINI_API_KEY.trim()
-  )}`;
+  const modelsToTry = await getGenerateContentModels();
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [
+  let lastError = "";
+
+  for (const model of modelsToTry) {
+    try {
+      console.log("Trying Gemini model:", model);
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${encodeURIComponent(
+        GEMINI_API_KEY.trim()
+      )}`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
             {
-              text: prompt,
+              role: "user",
+              parts: [
+                {
+                  text: prompt,
+                },
+              ],
             },
           ],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 500,
-      },
-    }),
-  });
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 500,
+          },
+        }),
+      });
 
-  const data = await response.json();
+      const data = await response.json();
 
-  if (!response.ok) {
-    throw new Error(data?.error?.message || JSON.stringify(data));
+      if (!response.ok) {
+        lastError = data?.error?.message || JSON.stringify(data);
+        console.log(`❌ ${model} failed:`, lastError);
+        continue;
+      }
+
+      const text =
+        data?.candidates?.[0]?.content?.parts
+          ?.map((part) => part.text || "")
+          .join("") || "";
+
+      if (!text.trim()) {
+        lastError = `${model} returned an empty response.`;
+        console.log(`❌ ${lastError}`);
+        continue;
+      }
+
+      lastSuccessfulModel = model;
+      console.log("✅ Gemini success with:", model);
+
+      return text.trim();
+    } catch (error) {
+      lastError = error.message;
+      console.log(`❌ ${model} error:`, error.message);
+      continue;
+    }
   }
 
-  const text =
-    data?.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text || "")
-      .join("") || "";
-
-  if (!text.trim()) {
-    throw new Error("Gemini returned an empty response.");
-  }
-
-  return text.trim();
+  throw new Error(lastError || "All Gemini models failed.");
 }
 
 /* FRONTEND FALLBACK */
